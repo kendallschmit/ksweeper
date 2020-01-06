@@ -6,6 +6,18 @@
 
 #include <glad/glad.h>
 
+// Define if compiling for Windows
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+    #define PLATFORM_WINDOWS
+#endif
+
+// open() flags for reading binary files
+#ifdef PLATFORM_WINDOWS
+    #define OPEN_FLAGS_READ_BINARY "rb"
+#else
+    #define OPEN_FLAGS_READ_BINARY "r"
+#endif
+
 extern bool kge_util_kprint_needs_header(char const *file, char const *func);
 
 #define kprint(...) do {\

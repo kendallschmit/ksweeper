@@ -9,7 +9,7 @@
 // Textures
 extern GLuint texture_load(char *path)
 {
-    FILE *f = fopen(path, "r");
+    FILE *f = fopen(path, OPEN_FLAGS_READ_BINARY);
     if (f == NULL) {
         kprint("Unable to load image \"%s\"", path);
         return 0;
@@ -33,16 +33,16 @@ extern GLuint texture_load(char *path)
     uint8_t pixel_depth = header_bytes[16];
     uint8_t img_descriptor = header_bytes[17];
 
-    kprint("id_len: %" PRIu8 "", id_len);
-    kprint("color_map_type: %" PRIu8 "", color_map_type);
-    kprint("image_type: %" PRIu8 "", image_type);
-    kprint("colomap_fei: %" PRIu16 "", colomap_fei);
-    kprint("colomap_len: %" PRIu16 "", colomap_len);
-    kprint("colomap_bpp: %" PRIu8 "", colomap_bpp);
-    kprint("width: %" PRIu16 "", width);
-    kprint("height: %" PRIu16 "", width);
-    kprint("pixel_depth: %" PRIu8 "", pixel_depth);
-    kprint("img_descriptor: %" PRIu8 "", img_descriptor);
+    //kprint("id_len: %" PRIu8 "", id_len);
+    //kprint("color_map_type: %" PRIu8 "", color_map_type);
+    //kprint("image_type: %" PRIu8 "", image_type);
+    //kprint("colomap_fei: %" PRIu16 "", colomap_fei);
+    //kprint("colomap_len: %" PRIu16 "", colomap_len);
+    //kprint("colomap_bpp: %" PRIu8 "", colomap_bpp);
+    //kprint("width: %" PRIu16 "", width);
+    //kprint("height: %" PRIu16 "", width);
+    //kprint("pixel_depth: %" PRIu8 "", pixel_depth);
+    //kprint("img_descriptor: %" PRIu8 "", img_descriptor);
 
     if (id_len > 0 && (fread(NULL, sizeof(uint8_t), id_len, f) != id_len)) {
         kprint("Unable to read id of \"%s\"", path);

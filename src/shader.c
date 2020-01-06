@@ -8,7 +8,7 @@
 GLuint shader_program_simple = 0;
 
 static GLuint load_shader(char *path, GLenum shader_type) {
-    FILE *f = fopen(path, "r");
+    FILE *f = fopen(path, OPEN_FLAGS_READ_BINARY);
     if (f == NULL) {
         kprint("Unable to open shader file \"%s\"", path);
         return 0;
