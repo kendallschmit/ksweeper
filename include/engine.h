@@ -9,14 +9,10 @@
 #include "vectors.h"
 #include "draw.h"
 
-#define NANOS 1000000000l
-#define MICROS 1000000l
-#define MILLIS 1000l
-#define SCALE MICROS
+#define DOTS_PER_UNIT 32
 
 struct kge_obj {
     struct vec3i pos;
-    struct vec3i vel;
     struct draw *draw;
 };
 

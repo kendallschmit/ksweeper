@@ -46,20 +46,13 @@ static void gen_perspective_matrix(GLfloat *mat, GLfloat angle, GLfloat ratio,
 }
 
 // Generate an orthographic projection matrix
-static void gen_orthographic_matrix(GLfloat *mat, GLfloat ortho_width,
+static void gen_orthographic_matrix(GLfloat *mat, GLfloat ortho_dpu,
         GLfloat ortho_depth, GLfloat w, GLfloat h)
 {
     memcpy(mat, identity4, sizeof(identity4));
-    if (w > h) {
-        mat_set(mat, 0, 0, (1.0 / ortho_width) * h / w);
-        mat_set(mat, 1, 1, 1.0 / ortho_width);
-        mat_set(mat, 2, 2, 1.0 / ortho_depth);
-    }
-    else {
-        mat_set(mat, 0, 0, 1.0 / ortho_width);
-        mat_set(mat, 1, 1, (1.0 / ortho_width) * w / h);
-        mat_set(mat, 2, 2, 1.0 / ortho_depth);
-    }
+    mat_set(mat, 0, 0, 2 * ortho_dpu / w);
+    mat_set(mat, 1, 1, 2 * ortho_dpu / h);
+    mat_set(mat, 2, 2, 1.0 / ortho_depth);
 }
 
 // Projection matrices
@@ -76,18 +69,18 @@ static GLfloat view_distance;
 static GLfloat fov_rad;
 static GLfloat near_clip;
 static GLfloat far_clip;
-static GLfloat ortho_width;
+static GLfloat dots_per_unit;
 static GLfloat ortho_depth;
 
 extern void draw_init(GLfloat view_distance_a, GLfloat fov_rad_a,
-        GLfloat near_clip_a, GLfloat far_clip_a, GLfloat ortho_width_a,
+        GLfloat near_clip_a, GLfloat far_clip_a, GLfloat dots_per_unit_a,
         GLfloat ortho_depth_a)
 {
     view_distance = view_distance_a;
     fov_rad = fov_rad_a;
     near_clip = near_clip_a;
     far_clip = far_clip_a;
-    ortho_width = ortho_width_a;
+    dots_per_unit = dots_per_unit_a;
     ortho_depth = ortho_depth_a;
 
     glEnable(GL_DEPTH_TEST);
@@ -109,12 +102,12 @@ extern void draw_init(GLfloat view_distance_a, GLfloat fov_rad_a,
 
 extern void draw_set_dimensions(GLuint w, GLuint h)
 {
+    kprint("set dimensions: %u %u", w, h);
     // Have to regenerat projection matrices for new aspect ratio
     GLfloat ratio = (GLfloat)w / h;
     gen_perspective_matrix(perspective_matrix, fov_rad, ratio,
             near_clip, far_clip);
-    gen_orthographic_matrix(orthographic_matrix, ortho_width,
-            ortho_depth, w, h);
+    gen_orthographic_matrix(orthographic_matrix, dots_per_unit, ortho_depth, w, h);
 }
 
 extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
