@@ -188,7 +188,7 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
     *game = (struct game){
             .w = w,
             .h = h,
-            .center = (struct vec2){ (w - 1) / 2, (h - 1) / 2 },
+            .center = (struct vec2){ (w - 1) / 2.0, (h - 1) / 2.0 },
     };
     // Allocate tiles and draws
     game->tiles = malloc(sizeof (struct tile) * w * h);

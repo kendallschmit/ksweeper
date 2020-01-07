@@ -19,7 +19,9 @@ struct input_set {
     struct input_button left;
     struct input_button right;
 
-    struct input_button n;
+    struct input_button e;
+    struct input_button m;
+    struct input_button x;
     struct input_button f;
 
     struct input_button mousel;

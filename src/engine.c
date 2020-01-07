@@ -36,12 +36,9 @@ static void fit_window()
     glfwSetWindowSize(window, game.w * dots_per_unit, game.h * dots_per_unit);
 }
 
-static void new_game()
+static void new_game(GLint w, GLint h, GLint bombs)
 {
     game_reset(&game);
-    GLint w = 9;
-    GLint h = 9;
-    GLint bombs = 9;
     game_start(&game, w, h, bombs);
     fit_window();
 }
@@ -74,7 +71,7 @@ static void window_size_callback(GLFWwindow *window, int x, int y)
 static void engine_init()
 {
     // Default engine values
-    dots_per_unit = 32;
+    dots_per_unit = 26;
 
     // Set up random
     srand(time(NULL));
@@ -119,9 +116,15 @@ static void engine_step(struct game *game)
     camera_pos.y -= drag.y;
     draw_set_position(camera_pos);
 
-    // New game with 'n'
-    if (input.n.press) {
-        new_game();
+    // New game with 'e'asy, 'm'edium, or e'x'pert
+    if (input.e.press) {
+        new_game(8, 8, 10);
+    }
+    if (input.m.press) {
+        new_game(16, 16, 40);
+    }
+    if (input.x.press) {
+        new_game(30, 16, 99);
     }
 
     // Fit window to game with 'f'
@@ -131,15 +134,15 @@ static void engine_step(struct game *game)
 
     // Zoom with mouse wheel
     if (input.scroll.y > 0) {
-        dots_per_unit -= 4;
+        dots_per_unit -= 2;
         if (dots_per_unit < 12)
-            dots_per_unit += 4;
+            dots_per_unit += 2;
         draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
     }
     else if (input.scroll.y < 0) {
-        dots_per_unit += 4;
+        dots_per_unit += 2;
         if (dots_per_unit > 64)
-            dots_per_unit -= 4;
+            dots_per_unit -= 2;
         draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
     }
 

@@ -26,8 +26,14 @@ static void key_callback(
         case GLFW_KEY_RIGHT:
             val = &input.right;
             break;
-        case GLFW_KEY_N:
-            val = &input.n;
+        case GLFW_KEY_E:
+            val = &input.e;
+            break;
+        case GLFW_KEY_M:
+            val = &input.m;
+            break;
+        case GLFW_KEY_X:
+            val = &input.x;
             break;
         case GLFW_KEY_F:
             val = &input.f;
@@ -107,7 +113,9 @@ void input_reset()
     reset_button(&input.down);
     reset_button(&input.left);
     reset_button(&input.right);
-    reset_button(&input.n);
+    reset_button(&input.e);
+    reset_button(&input.m);
+    reset_button(&input.x);
     reset_button(&input.f);
 
     reset_button(&input.mousel);
