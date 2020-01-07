@@ -36,6 +36,7 @@ struct game {
     struct tile *overclick_tile;
     double overclick_time;
 
+    double start_time;
     bool over;
 
     struct vec2 center;

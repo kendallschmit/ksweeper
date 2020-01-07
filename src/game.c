@@ -260,6 +260,8 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
             }
         }
     }
+    // Set start time
+    game->start_time = glfwGetTime();
     kprint("Done with %s()", __func__);
 }
 

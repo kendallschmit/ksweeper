@@ -162,6 +162,7 @@ static void engine_step(struct game *game)
         // Right click to flag tile
         if (input.mouser.release)
             game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
+        kprint("time: %f", glfwGetTime() - game->start_time);
     }
 
     // Clear and draw
