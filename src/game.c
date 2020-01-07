@@ -18,6 +18,9 @@ GLuint tex_digits[9];
 GLuint tex_hidden;
 GLuint tex_pressed;
 GLuint tex_flag;
+GLuint tex_mark;
+GLuint tex_bomb;
+GLuint tex_bomb_explode;
 
 GLuint tex_akko;
 GLuint tex_ritsu;
@@ -36,11 +39,16 @@ struct draw *draw_at(struct game *game, GLint x, GLint y)
     return &game->draw_group.draws[x + game->w * y];
 }
 
-void tile_update(struct tile *t)
+void tile_update(struct game *game, struct tile *t)
 {
     switch (t->state) {
     case TILE_STATE_HIDDEN:
-        if (t->pressed) {
+        if (game->over) {
+            if (t->bomb) {
+                t->draw->tex = tex_bomb;
+            }
+        }
+        else if (t->pressed) {
             t->draw->tex = tex_pressed;
         }
         else {
@@ -49,7 +57,7 @@ void tile_update(struct tile *t)
         break;
     case TILE_STATE_REVEAL:
         if (t->bomb) {
-            t->draw->tex = tex_akko;
+            t->draw->tex = tex_bomb_explode;
         }
         else {
             t->draw->tex = tex_digits[t->n];
@@ -59,11 +67,18 @@ void tile_update(struct tile *t)
         t->draw->tex = tex_flag;
         break;
     case TILE_STATE_MARK:
-        t->draw->tex = tex_ritsu;
+        t->draw->tex = tex_mark;
         break;
     default:
         kprint("Invalid value for t->state (%d)", t->state);
         exit(1);
+    }
+}
+
+void tile_update_all(struct game *game)
+{
+    for (GLint i = 0; i < game->h * game->w; i++) {
+        tile_update(game, &game->tiles[i]);
     }
 }
 
@@ -82,6 +97,9 @@ void game_init()
     tex_hidden = texture_load("res/tga/hidden.tga");
     tex_pressed = texture_load("res/tga/pressed.tga");
     tex_flag = texture_load("res/tga/flag.tga");
+    tex_mark = texture_load("res/tga/mark.tga");
+    tex_bomb = texture_load("res/tga/bomb.tga");
+    tex_bomb_explode = texture_load("res/tga/bomb_explode.tga");
 
     tex_akko = texture_load("res/tga/akko.tga");
     tex_ritsu = texture_load("res/tga/ritsu128.tga");
@@ -171,7 +189,7 @@ void game_press(struct game *game, GLint x, GLint y)
     game->pressed = tile_at(game, x, y);
     if (game->pressed != NULL) {
         game->pressed->pressed = true;
-        tile_update(game->pressed);
+        tile_update(game, game->pressed);
     }
 }
 
@@ -179,7 +197,7 @@ void game_unpress(struct game *game)
 {
     if (game->pressed != NULL) {
         game->pressed->pressed = false;
-        tile_update(game->pressed);
+        tile_update(game, game->pressed);
         game->pressed = NULL;
     }
 }
@@ -192,6 +210,10 @@ void game_reveal(struct game *game, GLint x, GLint y)
     if (t->state != TILE_STATE_HIDDEN)
         return;
     t->state = TILE_STATE_REVEAL;
+    if (t->bomb) {
+        game->over = true;
+        tile_update_all(game);
+    }
     if (t->n == 0) {
         game_reveal(game, x - 1, y);
         game_reveal(game, x + 1, y);
@@ -202,7 +224,7 @@ void game_reveal(struct game *game, GLint x, GLint y)
         game_reveal(game, x - 1, y + 1);
         game_reveal(game, x + 1, y + 1);
     }
-    tile_update(t);
+    tile_update(game, t);
 }
 
 void game_flag(struct game *game, GLint x, GLint y)
@@ -220,5 +242,5 @@ void game_flag(struct game *game, GLint x, GLint y)
     else {
         return;
     }
-    tile_update(t);
+    tile_update(game, t);
 }

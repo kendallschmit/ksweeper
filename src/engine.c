@@ -89,19 +89,22 @@ static void engine_step(GLFWwindow *window, struct game *game)
         //drag.y /= -DOTS_PER_UNIT;
         //player->pos.x += drag.x;
         //player->pos.y += drag.y;
+
         struct vec2 mouse_pos = screen_to_world(input.cursor_pos);
-        if (input.mousel.state) {
-            game_press(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
-        }
-        else {
+        GLint tile_x = roundf(mouse_pos.x);
+        GLint tile_y = roundf(mouse_pos.y);
+        // Visual press if click is held
+        if (input.mousel.state || input.mouser.state)
+            game_press(game, tile_x, tile_y);
+        else
             game_unpress(game);
-        }
-        if (input.mousel.release) {
+        // Left click to reveal tile
+        if (input.mousel.release)
             game_reveal(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
-        }
-        if (input.mouser.release) {
+        // Right click to flag tile
+        if (input.mouser.release)
             game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
-        }
+
         // Clear and draw
         glClear(GL_COLOR_BUFFER_BIT
                 | GL_DEPTH_BUFFER_BIT
@@ -148,7 +151,7 @@ extern int engine_go()
 
     game_init();
     struct game game;
-    game_start(&game, 10, 10, 20);
+    game_start(&game, 9, 9, 9);
     while (!glfwWindowShouldClose(window)) {
         engine_step(window, &game);
     }

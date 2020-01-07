@@ -29,6 +29,8 @@ struct game {
     struct draw_group draw_group; 
 
     struct tile *pressed;
+
+    bool over;
 };
 
 void game_init();

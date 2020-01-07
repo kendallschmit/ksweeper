@@ -9,7 +9,7 @@
 #include "vectors.h"
 #include "draw.h"
 
-#define DOTS_PER_UNIT 26
+#define DOTS_PER_UNIT 48
 
 struct draw_group {
     struct draw *draws;
