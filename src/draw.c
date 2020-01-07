@@ -72,6 +72,8 @@ static GLfloat far_clip;
 static GLfloat dots_per_unit;
 static GLfloat ortho_depth;
 
+static struct vec3 position;
+
 extern void draw_init(GLfloat view_distance_a, GLfloat fov_rad_a,
         GLfloat near_clip_a, GLfloat far_clip_a, GLfloat dots_per_unit_a,
         GLfloat ortho_depth_a)
@@ -100,14 +102,20 @@ extern void draw_init(GLfloat view_distance_a, GLfloat fov_rad_a,
     glUniformMatrix4fv(view_matrix_location, 1, GL_FALSE, view_matrix);
 }
 
-extern void draw_set_dimensions(GLuint w, GLuint h)
+extern void draw_set_dimensions(GLuint w, GLuint h, GLint dots_per_unit_a)
 {
     kprint("set dimensions: %u %u", w, h);
+    dots_per_unit = dots_per_unit_a;
     // Have to regenerat projection matrices for new aspect ratio
     GLfloat ratio = (GLfloat)w / h;
     gen_perspective_matrix(perspective_matrix, fov_rad, ratio,
             near_clip, far_clip);
     gen_orthographic_matrix(orthographic_matrix, dots_per_unit, ortho_depth, w, h);
+}
+
+extern void draw_set_position(struct vec3 pos)
+{
+    position = pos;
 }
 
 extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
@@ -133,9 +141,9 @@ extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
     for (GLuint i = 0; i < ndraws; i++) {
         struct draw *d = &draws[i];
         // Set up model matrix
-        mat_set(model_matrix, 3, 0, d->pos.x);
-        mat_set(model_matrix, 3, 1, d->pos.y);
-        mat_set(model_matrix, 3, 2, d->pos.z);
+        mat_set(model_matrix, 3, 0, d->pos.x - position.x);
+        mat_set(model_matrix, 3, 1, d->pos.y - position.y);
+        mat_set(model_matrix, 3, 2, d->pos.z - position.z);
         glUniformMatrix4fv(model_matrix_location, 1, GL_FALSE, model_matrix);
         // Draw
         if (!same_vao || i == 0)

@@ -26,6 +26,12 @@ static void key_callback(
         case GLFW_KEY_RIGHT:
             val = &input.right;
             break;
+        case GLFW_KEY_N:
+            val = &input.n;
+            break;
+        case GLFW_KEY_F:
+            val = &input.f;
+            break;
         default:
             return;
     }
@@ -37,16 +43,6 @@ static void key_callback(
         val->state = false;
         val->release = true;
     }
-}
-
-static void cursor_pos_callback(
-        GLFWwindow* window, double x, double y)
-{
-    if (input.mousem.state) {
-        input.drag.x += x - input.cursor_pos.x;
-        input.drag.y += y - input.cursor_pos.y;
-    }
-    input.cursor_pos = (struct vec2){ x, y };
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -75,6 +71,21 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
+static void cursor_pos_callback(GLFWwindow* window, double x, double y)
+{
+    if (input.mousem.state) {
+        input.drag.x += x - input.cursor_pos.x;
+        input.drag.y += y - input.cursor_pos.y;
+    }
+    input.cursor_pos = (struct vec2){ x, y };
+}
+
+void scroll_callback(GLFWwindow* window, double x, double y)
+{
+    input.scroll.x += x;
+    input.scroll.y += y;
+}
+
 void reset_button(struct input_button *b)
 {
     b->press = false;
@@ -85,8 +96,9 @@ void input_init(GLFWwindow* window)
 {
     // Register key-press callback
     glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, cursor_pos_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_pos_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 }
 
 void input_reset()
@@ -95,9 +107,13 @@ void input_reset()
     reset_button(&input.down);
     reset_button(&input.left);
     reset_button(&input.right);
+    reset_button(&input.n);
+    reset_button(&input.f);
 
     reset_button(&input.mousel);
     reset_button(&input.mouser);
     reset_button(&input.mousem);
+
     input.drag = (struct vec2){ 0 };
+    input.scroll = (struct vec2){ 0 };
 }

@@ -25,6 +25,12 @@ GLuint tex_bomb_explode;
 GLuint tex_akko;
 GLuint tex_ritsu;
 
+void tile_update(struct game *game, struct tile *t);
+void tile_update_all(struct game *game);
+void reveal(struct game *game, struct tile *t);
+void reveal_at(struct game *game, GLint x, GLint y);
+void super_reveal(struct game *game, struct tile *t);
+
 struct tile *tile_at(struct game *game, GLint x, GLint y)
 {
     if (x < 0 || y < 0 || x >= game->w || y >= game->h)
@@ -43,10 +49,8 @@ void tile_update(struct game *game, struct tile *t)
 {
     switch (t->state) {
     case TILE_STATE_HIDDEN:
-        if (game->over) {
-            if (t->bomb) {
-                t->draw->tex = tex_bomb;
-            }
+        if (game->over && t->bomb) {
+            t->draw->tex = tex_bomb;
         }
         else if (t->pressed) {
             t->draw->tex = tex_pressed;
@@ -82,6 +86,79 @@ void tile_update_all(struct game *game)
     }
 }
 
+void reveal(struct game *game, struct tile *t)
+{
+    if (t->state != TILE_STATE_HIDDEN)
+        return;
+    t->state = TILE_STATE_REVEAL;
+    if (t->bomb) {
+        game->over = true;
+        tile_update_all(game);
+    }
+    if (t->n == 0) {
+        reveal_at(game, t->x - 1, t->y);
+        reveal_at(game, t->x + 1, t->y);
+        reveal_at(game, t->x, t->y - 1);
+        reveal_at(game, t->x, t->y + 1);
+        reveal_at(game, t->x - 1, t->y - 1);
+        reveal_at(game, t->x + 1, t->y - 1);
+        reveal_at(game, t->x - 1, t->y + 1);
+        reveal_at(game, t->x + 1, t->y + 1);
+    }
+    tile_update(game, t);
+}
+
+void reveal_at(struct game *game, GLint x, GLint y)
+{
+    struct tile *t = tile_at(game, x, y);
+    if (t != NULL)
+        reveal(game, t);
+}
+
+void super_reveal(struct game *game, struct tile *t)
+{
+    // Count flags
+    GLint flag_count = 0;
+    struct tile *neighbors[] = {
+        tile_at(game, t->x - 1, t->y),
+        tile_at(game, t->x + 1, t->y),
+        tile_at(game, t->x, t->y - 1),
+        tile_at(game, t->x, t->y + 1),
+        tile_at(game, t->x - 1, t->y - 1),
+        tile_at(game, t->x + 1, t->y - 1),
+        tile_at(game, t->x - 1, t->y + 1),
+        tile_at(game, t->x + 1, t->y + 1),
+    };
+    for (GLint i = 0; i < 8; i++) {
+        struct tile *n = neighbors[i];
+        if (n == NULL)
+            continue;
+        if (n->state == TILE_STATE_MARK)
+            return;
+        if (n->state == TILE_STATE_FLAG)
+            flag_count++;
+    }
+    if (flag_count == t->n) {
+        for (GLint i = 0; i < 8; i++) {
+            struct tile *n = neighbors[i];
+            if (n == NULL)
+                continue;
+            if (n->state == TILE_STATE_HIDDEN)
+                reveal(game, n);
+        }
+    }
+}
+
+void overclick(struct game *game, GLint x, GLint y)
+{
+    struct tile *t = tile_at(game, x, y);
+    double current_time = glfwGetTime();
+    if (game->overclick_tile == t && current_time - game->overclick_time < 0.3)
+        super_reveal(game, t);
+    game->overclick_tile = t;
+    game->overclick_time = current_time;
+}
+
 void game_init()
 {
     tex_digits[0] = texture_load("res/tga/zero.tga");
@@ -111,6 +188,7 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
     *game = (struct game){
             .w = w,
             .h = h,
+            .center = (struct vec2){ (w - 1) / 2, (h - 1) / 2 },
     };
     // Allocate tiles and draws
     game->tiles = malloc(sizeof (struct tile) * w * h);
@@ -132,6 +210,8 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
             struct draw *d = draw_at(game, x, y);
             *t = (struct tile){
                 .draw = d,
+                .x = x,
+                .y = y,
             };
             *d = (struct draw){
                 .vao = vaos[VAO_QUAD],
@@ -183,6 +263,15 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
     kprint("Done with %s()", __func__);
 }
 
+void game_reset(struct game *game)
+{
+    if (game->tiles != NULL)
+        free(game->tiles);
+    if (game->draw_group.draws != NULL)
+        free(game->draw_group.draws);
+    *game = (struct game){ 0 };
+}
+
 void game_press(struct game *game, GLint x, GLint y)
 {
     game_unpress(game);
@@ -190,6 +279,24 @@ void game_press(struct game *game, GLint x, GLint y)
     if (game->pressed != NULL) {
         game->pressed->pressed = true;
         tile_update(game, game->pressed);
+        if (game->pressed->state == TILE_STATE_REVEAL && game->pressed->n > 0) {
+            game->extra_pressed[0] = tile_at(game, x - 1, y);
+            game->extra_pressed[1] = tile_at(game, x + 1, y);
+            game->extra_pressed[2] = tile_at(game, x, y - 1);
+            game->extra_pressed[3] = tile_at(game, x, y + 1);
+            game->extra_pressed[4] = tile_at(game, x - 1, y - 1);
+            game->extra_pressed[5] = tile_at(game, x + 1, y - 1);
+            game->extra_pressed[6] = tile_at(game, x - 1, y + 1);
+            game->extra_pressed[7] = tile_at(game, x + 1, y + 1);
+            for (GLint i = 0; i < 8; i++) {
+                struct tile *n = game->extra_pressed[i];
+                if (n == NULL) {
+                    continue;
+                }
+                n->pressed = true;
+                tile_update(game, n);
+            }
+        }
     }
 }
 
@@ -198,33 +305,31 @@ void game_unpress(struct game *game)
     if (game->pressed != NULL) {
         game->pressed->pressed = false;
         tile_update(game, game->pressed);
+        GLint x = game->pressed->x;
+        GLint y = game->pressed->y;
         game->pressed = NULL;
+        for (GLint i = 0; i < 8; i++) {
+            struct tile *n = game->extra_pressed[i];
+            if (n == NULL) {
+                continue;
+            }
+            n->pressed = false;
+            tile_update(game, n);
+            game->extra_pressed[i] = 0;
+        }
     }
 }
 
 void game_reveal(struct game *game, GLint x, GLint y)
 {
-    if (x < 0 || y < 0 || x >= game->w || y >= game->h)
-        return;
     struct tile *t = tile_at(game, x, y);
-    if (t->state != TILE_STATE_HIDDEN)
+    if (t == NULL)
         return;
-    t->state = TILE_STATE_REVEAL;
-    if (t->bomb) {
-        game->over = true;
-        tile_update_all(game);
+    if (t->state == TILE_STATE_REVEAL) {
+        overclick(game, x, y);
+        return;
     }
-    if (t->n == 0) {
-        game_reveal(game, x - 1, y);
-        game_reveal(game, x + 1, y);
-        game_reveal(game, x, y - 1);
-        game_reveal(game, x, y + 1);
-        game_reveal(game, x - 1, y - 1);
-        game_reveal(game, x + 1, y - 1);
-        game_reveal(game, x - 1, y + 1);
-        game_reveal(game, x + 1, y + 1);
-    }
-    tile_update(game, t);
+    reveal(game, t);
 }
 
 void game_flag(struct game *game, GLint x, GLint y)

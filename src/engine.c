@@ -19,17 +19,42 @@
 
 #include "game.h"
 
+GLFWwindow *window;
+
 struct vec2 window_wh;
+struct vec3 camera_pos;
+GLint dots_per_unit;
+
+// Dealing with games
+struct game game;
+
+static void fit_window()
+{
+    camera_pos.x = game.center.x;
+    camera_pos.y = game.center.y;
+    draw_set_position(camera_pos);
+    glfwSetWindowSize(window, game.w * dots_per_unit, game.h * dots_per_unit);
+}
+
+static void new_game()
+{
+    game_reset(&game);
+    GLint w = 9;
+    GLint h = 9;
+    GLint bombs = 9;
+    game_start(&game, w, h, bombs);
+    fit_window();
+}
 
 // GLFW callbacks
 static void error_callback(int error, const char* description);
 static void window_size_callback(GLFWwindow *window, int x, int y);
 
 // Engine
-static void engine_init(GLFWwindow *window);
-static void engine_deinit(GLFWwindow *window);
+static void engine_init();
+static void engine_deinit();
 
-static void engine_step(GLFWwindow *window, struct game *game);
+static void engine_step(struct game *game);
 static void render_update(struct draw_group *group);
 
 static struct vec2 screen_to_world(struct vec2 point);
@@ -41,14 +66,17 @@ static void error_callback(int error, const char* description)
 
 static void window_size_callback(GLFWwindow *window, int x, int y)
 {
-    draw_set_dimensions(x, y);
+    draw_set_dimensions(x, y, dots_per_unit);
     window_wh = (struct vec2){ x, y };
     glViewport(0, 0, x, y);
 }
 
-static void engine_init(GLFWwindow *window)
+static void engine_init()
 {
-    // Set up game
+    // Default engine values
+    dots_per_unit = 32;
+
+    // Set up random
     srand(time(NULL));
 
     // Set up OpenGL context
@@ -59,37 +87,64 @@ static void engine_init(GLFWwindow *window)
     // Init engine components
     shader_init();
     vaos_init();
-    draw_init(5, 1.5, 0.1, 1000, DOTS_PER_UNIT, 1000);
+    draw_init(5, 1.5, 0.1, 1000, dots_per_unit, 1000);
     input_init(window);
 
     // Window dimensions
     int winx, winy;
     glfwGetWindowSize(window, &winx, &winy);
-    draw_set_dimensions((GLfloat)winx, (GLfloat)winy);
+    draw_set_dimensions((GLfloat)winx, (GLfloat)winy, dots_per_unit);
     window_wh = (struct vec2){ winx, winy };
     glfwSetWindowSizeCallback(window, window_size_callback);
 }
 
-static void engine_deinit(GLFWwindow *window)
+static void engine_deinit()
 {
     // Deinit engine stuff
     shader_deinit();
     vaos_deinit();
 }
 
-static void engine_step(GLFWwindow *window, struct game *game)
+static void engine_step(struct game *game)
 {
-        // Input
-        input_reset();
-        glfwPollEvents();
-        // GAMEPLAY HAPPENS HERE?
-        //struct kge_obj *player = &foreground_objs.objs[0];
-        //struct vec2 drag = input.drag;
-        //drag.x /= DOTS_PER_UNIT;
-        //drag.y /= -DOTS_PER_UNIT;
-        //player->pos.x += drag.x;
-        //player->pos.y += drag.y;
+    // Input
+    input_reset();
+    glfwPollEvents();
 
+    // Panning with middle click
+    struct vec2 drag = input.drag;
+    drag.x /= dots_per_unit;
+    drag.y /= -dots_per_unit;
+    camera_pos.x -= drag.x;
+    camera_pos.y -= drag.y;
+    draw_set_position(camera_pos);
+
+    // New game with 'n'
+    if (input.n.press) {
+        new_game();
+    }
+
+    // Fit window to game with 'f'
+    if (input.f.press) {
+        fit_window();
+    }
+
+    // Zoom with mouse wheel
+    if (input.scroll.y > 0) {
+        dots_per_unit -= 4;
+        if (dots_per_unit < 12)
+            dots_per_unit += 4;
+        draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
+    }
+    else if (input.scroll.y < 0) {
+        dots_per_unit += 4;
+        if (dots_per_unit > 64)
+            dots_per_unit -= 4;
+        draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
+    }
+
+    if (!game->over) {
+        // Game interactions
         struct vec2 mouse_pos = screen_to_world(input.cursor_pos);
         GLint tile_x = roundf(mouse_pos.x);
         GLint tile_y = roundf(mouse_pos.y);
@@ -104,26 +159,29 @@ static void engine_step(GLFWwindow *window, struct game *game)
         // Right click to flag tile
         if (input.mouser.release)
             game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
+    }
 
-        // Clear and draw
-        glClear(GL_COLOR_BUFFER_BIT
-                | GL_DEPTH_BUFFER_BIT
-                | GL_ACCUM_BUFFER_BIT
-                | GL_STENCIL_BUFFER_BIT);
-        //draw_list(background_objs.draws, background_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
-        //draw_list(foreground_objs.draws, foreground_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
-        draw_list(game->draw_group.draws, game->draw_group.count, PROJECTION_ORTHOGRAPHIC, false, false);
-        // Push to display
-        glfwSwapBuffers(window);
+    // Clear and draw
+    glClear(GL_COLOR_BUFFER_BIT
+            | GL_DEPTH_BUFFER_BIT
+            | GL_ACCUM_BUFFER_BIT
+            | GL_STENCIL_BUFFER_BIT);
+    //draw_list(background_objs.draws, background_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
+    //draw_list(foreground_objs.draws, foreground_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
+    draw_list(game->draw_group.draws, game->draw_group.count, PROJECTION_ORTHOGRAPHIC, false, false);
+    // Push to display
+    glfwSwapBuffers(window);
 }
 
 static struct vec2 screen_to_world(struct vec2 point)
 {
     point.x -= window_wh.x / 2;
     point.y -= window_wh.y / 2;
-    point.x /= DOTS_PER_UNIT;
-    point.y /= DOTS_PER_UNIT;
+    point.x /= dots_per_unit;
+    point.y /= dots_per_unit;
     point.y *= -1;
+    point.x += camera_pos.x;
+    point.y += camera_pos.y;
     return point;
 }
 
@@ -140,22 +198,20 @@ extern int engine_go()
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     // Make the window
-    GLFWwindow *window = glfwCreateWindow(640, 480, "Your Mom", NULL, NULL);
-    if (!window) {
+    window = glfwCreateWindow(320, 240, "ksweeper", NULL, NULL);
+    if (window == NULL) {
         glfwTerminate();
         return -1;
     }
 
     // Init, loop, deinit
-    engine_init(window);
+    engine_init();
 
     game_init();
-    struct game game;
-    game_start(&game, 9, 9, 9);
     while (!glfwWindowShouldClose(window)) {
-        engine_step(window, &game);
+        engine_step(&game);
     }
-    engine_deinit(window);
+    engine_deinit();
 
     // Cleanup GLFW
     glfwDestroyWindow(window);

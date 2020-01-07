@@ -19,13 +19,16 @@ struct input_set {
     struct input_button left;
     struct input_button right;
 
+    struct input_button n;
+    struct input_button f;
+
     struct input_button mousel;
     struct input_button mouser;
     struct input_button mousem;
 
-
     struct vec2 drag;
     struct vec2 cursor_pos;
+    struct vec2 scroll;
 };
 
 extern struct input_set input;

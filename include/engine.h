@@ -9,8 +9,6 @@
 #include "vectors.h"
 #include "draw.h"
 
-#define DOTS_PER_UNIT 48
-
 struct draw_group {
     struct draw *draws;
     GLuint count;

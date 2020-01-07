@@ -20,22 +20,31 @@ struct tile {
     GLint state;
     bool bomb;
     bool pressed;
+    GLint x;
+    GLint y;
 };
 
 struct game {
     GLint h;
     GLint w;
     struct tile *tiles;
-    struct draw_group draw_group; 
+    struct draw_group draw_group;
 
     struct tile *pressed;
+    struct tile *extra_pressed[8];
+
+    struct tile *overclick_tile;
+    double overclick_time;
 
     bool over;
+
+    struct vec2 center;
 };
 
 void game_init();
 
 void game_start(struct game *game, GLint h, GLint w, GLint bombs);
+void game_reset(struct game *game);
 
 void game_press(struct game *game, GLint x, GLint y);
 void game_unpress(struct game *game);
