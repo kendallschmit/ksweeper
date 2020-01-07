@@ -1,0 +1,43 @@
+#ifndef GAME_H
+#define GAME_H
+
+#include <stdbool.h>
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include "engine.h"
+#include "vectors.h"
+#include "draw.h"
+
+#define TILE_STATE_HIDDEN 0
+#define TILE_STATE_REVEAL 1
+#define TILE_STATE_FLAG 2
+#define TILE_STATE_MARK 3
+struct tile {
+    struct draw *draw;
+    GLint n;
+    GLint state;
+    bool bomb;
+    bool pressed;
+};
+
+struct game {
+    GLint h;
+    GLint w;
+    struct tile *tiles;
+    struct draw_group draw_group; 
+
+    struct tile *pressed;
+};
+
+void game_init();
+
+void game_start(struct game *game, GLint h, GLint w, GLint bombs);
+
+void game_press(struct game *game, GLint x, GLint y);
+void game_unpress(struct game *game);
+void game_reveal(struct game *game, GLint x, GLint y);
+void game_flag(struct game *game, GLint x, GLint y);
+
+#endif

@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -16,11 +17,9 @@
 #include "draw.h"
 #include "input.h"
 
-struct object_group background_objs = { 0 };
-struct object_group foreground_objs = { 0 };
+#include "game.h"
 
-GLuint tex_akko;
-GLuint tex_ritsu;
+struct vec2 window_wh;
 
 // GLFW callbacks
 static void error_callback(int error, const char* description);
@@ -30,8 +29,10 @@ static void window_size_callback(GLFWwindow *window, int x, int y);
 static void engine_init(GLFWwindow *window);
 static void engine_deinit(GLFWwindow *window);
 
-static void engine_step(GLFWwindow *window);
-static void render_update(struct object_group *group);
+static void engine_step(GLFWwindow *window, struct game *game);
+static void render_update(struct draw_group *group);
+
+static struct vec2 screen_to_world(struct vec2 point);
 
 static void error_callback(int error, const char* description)
 {
@@ -41,15 +42,8 @@ static void error_callback(int error, const char* description)
 static void window_size_callback(GLFWwindow *window, int x, int y)
 {
     draw_set_dimensions(x, y);
-    input_set_dimensions(x, y);
+    window_wh = (struct vec2){ x, y };
     glViewport(0, 0, x, y);
-}
-
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
 }
 
 static void engine_init(GLFWwindow *window)
@@ -72,20 +66,8 @@ static void engine_init(GLFWwindow *window)
     int winx, winy;
     glfwGetWindowSize(window, &winx, &winy);
     draw_set_dimensions((GLfloat)winx, (GLfloat)winy);
-    input_set_dimensions((GLfloat)winx, (GLfloat)winy);
+    window_wh = (struct vec2){ winx, winy };
     glfwSetWindowSizeCallback(window, window_size_callback);
-
-    tex_akko = texture_load("res/tga/akko.tga");
-    tex_ritsu = texture_load("res/tga/ritsu128.tga");
-
-    // Only orthographic object is player for now
-    struct kge_obj *player = &foreground_objs.objs[0];
-    player->draw = &foreground_objs.draws[0];
-    *player->draw = (struct draw){
-        .vao = vaos[VAO_QUAD],
-        .tex = tex_akko,
-    };
-    foreground_objs.count = 1;
 }
 
 static void engine_deinit(GLFWwindow *window)
@@ -95,40 +77,51 @@ static void engine_deinit(GLFWwindow *window)
     vaos_deinit();
 }
 
-static void engine_step(GLFWwindow *window)
+static void engine_step(GLFWwindow *window, struct game *game)
 {
         // Input
+        input_reset();
         glfwPollEvents();
-
         // GAMEPLAY HAPPENS HERE?
-        struct kge_obj *player = &foreground_objs.objs[0];
-        player->pos.x = input.cursor_pos.x;
-        player->pos.y = input.cursor_pos.y;
-
-        // Update draw structs
-        render_update(&background_objs);
-        render_update(&foreground_objs);
+        //struct kge_obj *player = &foreground_objs.objs[0];
+        //struct vec2 drag = input.drag;
+        //drag.x /= DOTS_PER_UNIT;
+        //drag.y /= -DOTS_PER_UNIT;
+        //player->pos.x += drag.x;
+        //player->pos.y += drag.y;
+        struct vec2 mouse_pos = screen_to_world(input.cursor_pos);
+        if (input.mousel.state) {
+            game_press(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
+        }
+        else {
+            game_unpress(game);
+        }
+        if (input.mousel.release) {
+            game_reveal(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
+        }
+        if (input.mouser.release) {
+            game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
+        }
         // Clear and draw
         glClear(GL_COLOR_BUFFER_BIT
                 | GL_DEPTH_BUFFER_BIT
                 | GL_ACCUM_BUFFER_BIT
                 | GL_STENCIL_BUFFER_BIT);
-        draw_list(background_objs.draws, background_objs.count,
-                PROJECTION_ORTHOGRAPHIC, true, true);
-        draw_list(foreground_objs.draws, foreground_objs.count,
-                PROJECTION_ORTHOGRAPHIC, true, true);
+        //draw_list(background_objs.draws, background_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
+        //draw_list(foreground_objs.draws, foreground_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
+        draw_list(game->draw_group.draws, game->draw_group.count, PROJECTION_ORTHOGRAPHIC, false, false);
         // Push to display
         glfwSwapBuffers(window);
 }
 
-static void render_update(struct object_group *group)
+static struct vec2 screen_to_world(struct vec2 point)
 {
-    for (GLuint i = 0; i < group->count; i++) {
-        struct kge_obj *o = &group->objs[i];
-        o->draw->pos.x = (GLfloat)o->pos.x;
-        o->draw->pos.y = (GLfloat)o->pos.y;
-        o->draw->pos.z = (GLfloat)o->pos.z;
-    }
+    point.x -= window_wh.x / 2;
+    point.y -= window_wh.y / 2;
+    point.x /= DOTS_PER_UNIT;
+    point.y /= DOTS_PER_UNIT;
+    point.y *= -1;
+    return point;
 }
 
 extern int engine_go()
@@ -152,8 +145,12 @@ extern int engine_go()
 
     // Init, loop, deinit
     engine_init(window);
+
+    game_init();
+    struct game game;
+    game_start(&game, 10, 10, 20);
     while (!glfwWindowShouldClose(window)) {
-        engine_step(window);
+        engine_step(window, &game);
     }
     engine_deinit(window);
 

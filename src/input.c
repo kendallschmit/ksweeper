@@ -5,8 +5,6 @@
 
 struct input_set input = { 0 };
 
-static struct vec2i window_wh;
-
 static void key_callback(
         GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -14,7 +12,7 @@ static void key_callback(
         glfwSetWindowShouldClose(window, GLFW_TRUE);
         return;
     }
-    bool *val;
+    struct input_button *val;
     switch (key) {
         case GLFW_KEY_UP:
             val = &input.up;
@@ -32,35 +30,74 @@ static void key_callback(
             return;
     }
     if (action == GLFW_PRESS) {
-        *val = true;
+        val->state = true;
+        val->press = true;
     }
     else if (action == GLFW_RELEASE) {
-        *val = false;
+        val->state = false;
+        val->release = true;
     }
 }
 
 static void cursor_pos_callback(
         GLFWwindow* window, double x, double y)
 {
-    x -= window_wh.x / 2;
-    y -= window_wh.y / 2;
-    x /= DOTS_PER_UNIT;
-    y /= DOTS_PER_UNIT;
-    y *= -1;
-    input.cursor_pos.x = (GLfloat)x;
-    input.cursor_pos.y = (GLfloat)y;
+    if (input.mousem.state) {
+        input.drag.x += x - input.cursor_pos.x;
+        input.drag.y += y - input.cursor_pos.y;
+    }
+    input.cursor_pos = (struct vec2){ x, y };
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    struct input_button *val;
+    switch (button) {
+        case GLFW_MOUSE_BUTTON_LEFT:
+            val = &input.mousel;
+            break;
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            val = &input.mouser;
+            break;
+        case GLFW_MOUSE_BUTTON_MIDDLE:
+            val = &input.mousem;
+            break;
+        default:
+            return;
+    }
+    if (action == GLFW_PRESS) {
+        val->state = true;
+        val->press = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        val->state = false;
+        val->release = true;
+    }
+}
+
+void reset_button(struct input_button *b)
+{
+    b->press = false;
+    b->release = false;
+}
 
 void input_init(GLFWwindow* window)
 {
     // Register key-press callback
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_pos_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 }
 
-void input_set_dimensions(GLuint x, GLuint y)
+void input_reset()
 {
-    window_wh.x = x;
-    window_wh.y = y;
+    reset_button(&input.up);
+    reset_button(&input.down);
+    reset_button(&input.left);
+    reset_button(&input.right);
+
+    reset_button(&input.mousel);
+    reset_button(&input.mouser);
+    reset_button(&input.mousem);
+    input.drag = (struct vec2){ 0 };
 }

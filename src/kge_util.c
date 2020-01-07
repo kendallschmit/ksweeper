@@ -23,9 +23,7 @@ extern GLfloat randf(GLfloat minimum, GLfloat maximum)
     return r += minimum;
 }
 
-extern GLint randi(GLfloat minimum, GLfloat maximum)
+extern GLint randi(GLint minimum, GLint maximum)
 {
-    GLfloat r = (GLfloat)rand() / RAND_MAX;
-    r *= maximum - minimum;
-    return r += minimum;
+    return rand() % (maximum - minimum) + minimum;
 }

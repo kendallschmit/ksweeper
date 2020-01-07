@@ -31,6 +31,6 @@ extern bool kge_util_kprint_needs_header(char const *file, char const *func);
 } while (0);
 
 extern GLfloat randf(GLfloat minimum, GLfloat maximum);
-extern GLint randi(GLfloat minimum, GLfloat maximum);
+extern GLint randi(GLint minimum, GLint maximum);
 
 #endif

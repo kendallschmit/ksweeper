@@ -7,18 +7,31 @@
 
 #include "vectors.h"
 
-struct input_set {
-    bool up;
-    bool down;
-    bool left;
-    bool right;
+struct input_button {
+    bool state;
+    bool press;
+    bool release;
+};
 
+struct input_set {
+    struct input_button up;
+    struct input_button down;
+    struct input_button left;
+    struct input_button right;
+
+    struct input_button mousel;
+    struct input_button mouser;
+    struct input_button mousem;
+
+
+    struct vec2 drag;
     struct vec2 cursor_pos;
 };
 
 extern struct input_set input;
 
-void input_init(GLFWwindow* window);
-void input_set_dimensions(GLuint x, GLuint y);
+extern void input_init(GLFWwindow* window);
+
+extern void input_reset();
 
 #endif
