@@ -18,6 +18,7 @@ GLuint tex_digits[9];
 GLuint tex_hidden;
 GLuint tex_pressed;
 GLuint tex_flag;
+GLuint tex_wrong_flag;
 GLuint tex_mark;
 GLuint tex_bomb;
 GLuint tex_bomb_explode;
@@ -33,6 +34,7 @@ void super_reveal(struct game *game, struct tile *t);
 void tile_flag(struct game *game, struct tile *t);
 
 void victory_check(struct game *game);
+void count_bombs(struct game *game);
 
 struct tile *tile_at(struct game *game, GLint x, GLint y)
 {
@@ -71,10 +73,20 @@ void tile_update(struct game *game, struct tile *t)
         }
         break;
     case TILE_STATE_FLAG:
-        t->draw->tex = tex_flag;
+        if (game->over && !t->bomb) {
+            t->draw->tex = tex_wrong_flag;
+        }
+        else {
+            t->draw->tex = tex_flag;
+        }
         break;
     case TILE_STATE_MARK:
-        t->draw->tex = tex_mark;
+        if (game->over && t->bomb) {
+            t->draw->tex = tex_bomb;
+        }
+        else {
+            t->draw->tex = tex_mark;
+        }
         break;
     default:
         kprint("Invalid value for t->state (%d)", t->state);
@@ -94,11 +106,27 @@ void reveal(struct game *game, struct tile *t)
     if (t->state != TILE_STATE_HIDDEN)
         return;
     t->state = TILE_STATE_REVEAL;
-    game->reveal_count++;
+
+    if (game->reveal_count == 0 && t->bomb) {
+        for (GLint x = 0; x < game->w; x++) {
+            for (GLint y = game->h - 1; y >= 0; y--) {
+                struct tile *other = tile_at(game, x, y);
+                if (other->bomb)
+                    continue;
+                other->bomb = true;
+                kprint("moved bomb from %d %d to %d %d", t->x, t->y, other->x, other->y);
+                goto moved_bomb;
+            }
+        }
+        moved_bomb:
+        t->bomb = false;
+        count_bombs(game);
+    }
     if (t->bomb) {
         game->over = true;
         tile_update_all(game);
     }
+    game->reveal_count++;
     if (t->n == 0) {
         reveal_at(game, t->x - 1, t->y);
         reveal_at(game, t->x + 1, t->y);
@@ -182,6 +210,32 @@ void victory_check(struct game *game)
     }
 }
 
+void count_bombs(struct game *game)
+{
+    kprint("Count bombs");
+    for (GLint x = 0; x < game->w; x++) {
+        for (GLint y = 0; y < game->h; y++) {
+            struct tile *t = tile_at(game, x, y);
+            struct tile *neighbors[] = {
+                tile_at(game, x - 1, y),
+                tile_at(game, x + 1, y),
+                tile_at(game, x, y - 1),
+                tile_at(game, x, y + 1),
+                tile_at(game, x - 1, y - 1),
+                tile_at(game, x + 1, y - 1),
+                tile_at(game, x - 1, y + 1),
+                tile_at(game, x + 1, y + 1),
+            };
+            t->n = 0;
+            for (GLint i = 0; i < 8; i++) {
+                if (neighbors[i] != NULL && neighbors[i]->bomb) {
+                    t->n++;
+                }
+            }
+        }
+    }
+}
+
 void overclick(struct game *game, GLint x, GLint y)
 {
     struct tile *t = tile_at(game, x, y);
@@ -207,6 +261,7 @@ void game_init()
     tex_hidden = texture_load("res/tga/hidden.tga");
     tex_pressed = texture_load("res/tga/pressed.tga");
     tex_flag = texture_load("res/tga/flag.tga");
+    tex_wrong_flag = texture_load("res/tga/wrong_flag.tga");
     tex_mark = texture_load("res/tga/mark.tga");
     tex_bomb = texture_load("res/tga/bomb.tga");
     tex_bomb_explode = texture_load("res/tga/bomb_explode.tga");
@@ -273,27 +328,7 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
         game->tiles[bomblist[i]].bomb = true;
     }
     // Count bombs
-    kprint("Count bombs");
-    for (GLint x = 0; x < w; x++) {
-        for (GLint y = 0; y < h; y++) {
-            struct tile *t = tile_at(game, x, y);
-            struct tile *neighbors[] = {
-                tile_at(game, x - 1, y),
-                tile_at(game, x + 1, y),
-                tile_at(game, x, y - 1),
-                tile_at(game, x, y + 1),
-                tile_at(game, x - 1, y - 1),
-                tile_at(game, x + 1, y - 1),
-                tile_at(game, x - 1, y + 1),
-                tile_at(game, x + 1, y + 1),
-            };
-            for (GLint i = 0; i < 8; i++) {
-                if (neighbors[i] != NULL && neighbors[i]->bomb) {
-                    t->n++;
-                }
-            }
-        }
-    }
+    count_bombs(game);
     // Set start time
     game->start_time = glfwGetTime();
     kprint("Done with %s()", __func__);
