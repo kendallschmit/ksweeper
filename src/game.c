@@ -272,6 +272,7 @@ void game_init()
 
 void game_start(struct game *game, GLint w, GLint h, GLint bombs)
 {
+    game_reset(game);
     // Init struct
     *game = (struct game){
             .w = w,
@@ -334,6 +335,11 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
     kprint("Done with %s()", __func__);
 }
 
+void game_restart(struct game *game)
+{
+    game_start(game, game->w, game->h, game->bombs);
+}
+
 void game_reset(struct game *game)
 {
     if (game->tiles != NULL)
@@ -350,24 +356,6 @@ void game_press(struct game *game, GLint x, GLint y)
     if (game->pressed != NULL) {
         game->pressed->pressed = true;
         tile_update(game, game->pressed);
-        if (game->pressed->state == TILE_STATE_REVEAL && game->pressed->n > 0) {
-            game->extra_pressed[0] = tile_at(game, x - 1, y);
-            game->extra_pressed[1] = tile_at(game, x + 1, y);
-            game->extra_pressed[2] = tile_at(game, x, y - 1);
-            game->extra_pressed[3] = tile_at(game, x, y + 1);
-            game->extra_pressed[4] = tile_at(game, x - 1, y - 1);
-            game->extra_pressed[5] = tile_at(game, x + 1, y - 1);
-            game->extra_pressed[6] = tile_at(game, x - 1, y + 1);
-            game->extra_pressed[7] = tile_at(game, x + 1, y + 1);
-            for (GLint i = 0; i < 8; i++) {
-                struct tile *n = game->extra_pressed[i];
-                if (n == NULL) {
-                    continue;
-                }
-                n->pressed = true;
-                tile_update(game, n);
-            }
-        }
     }
 }
 
@@ -379,15 +367,6 @@ void game_unpress(struct game *game)
         GLint x = game->pressed->x;
         GLint y = game->pressed->y;
         game->pressed = NULL;
-        for (GLint i = 0; i < 8; i++) {
-            struct tile *n = game->extra_pressed[i];
-            if (n == NULL) {
-                continue;
-            }
-            n->pressed = false;
-            tile_update(game, n);
-            game->extra_pressed[i] = 0;
-        }
     }
 }
 

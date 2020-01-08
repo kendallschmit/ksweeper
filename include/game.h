@@ -32,7 +32,6 @@ struct game {
     struct draw_group draw_group;
 
     struct tile *pressed;
-    struct tile *extra_pressed[8];
 
     struct tile *overclick_tile;
     double overclick_time;
@@ -49,6 +48,7 @@ struct game {
 void game_init();
 
 void game_start(struct game *game, GLint h, GLint w, GLint bombs);
+void game_restart(struct game *game);
 void game_reset(struct game *game);
 
 void game_press(struct game *game, GLint x, GLint y);

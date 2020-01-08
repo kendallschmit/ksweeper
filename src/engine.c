@@ -106,7 +106,7 @@ static void window_size_callback(GLFWwindow *window, int x, int y)
 static void engine_init()
 {
     // Default engine values
-    dots_per_unit = 32;
+    dots_per_unit = 40;
 
     // Set up random
     srand(time(NULL));
@@ -218,6 +218,13 @@ static void engine_step(struct game *game)
     }
     else {
         win_icon.tex = game->win ? tex_win : tex_lose;
+        if (input.mousel.release
+                && input.cursor_pos.y < dots_per_unit
+                && input.cursor_pos.x > window_wh.x / 2 - dots_per_unit * 1
+                && input.cursor_pos.x < window_wh.x / 2 + dots_per_unit * 1) {
+            game_restart(game);
+            kprint("Restarting game");
+        }
     }
     // Clear and draw
     glClear(GL_COLOR_BUFFER_BIT
