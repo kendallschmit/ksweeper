@@ -27,6 +27,7 @@ struct tile {
 struct game {
     GLint h;
     GLint w;
+    GLint bombs;
     struct tile *tiles;
     struct draw_group draw_group;
 
@@ -37,7 +38,10 @@ struct game {
     double overclick_time;
 
     double start_time;
+    GLint flag_count;
+    GLint reveal_count;
     bool over;
+    bool win;
 
     struct vec2 center;
 };

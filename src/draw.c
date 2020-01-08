@@ -119,7 +119,7 @@ extern void draw_set_position(struct vec3 pos)
 }
 
 extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
-        bool same_vao, bool same_tex)
+        bool same_vao, bool same_tex, bool relative)
 {
     // Set projection matrix
     GLfloat *proj_matrix = identity4;
@@ -138,12 +138,15 @@ extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
 
     GLfloat model_matrix[16];
     memcpy(model_matrix, identity4, sizeof(identity4));
+    struct vec3 offset = { 0 };
+    if (relative)
+        offset = position;
     for (GLuint i = 0; i < ndraws; i++) {
         struct draw *d = &draws[i];
         // Set up model matrix
-        mat_set(model_matrix, 3, 0, d->pos.x - position.x);
-        mat_set(model_matrix, 3, 1, d->pos.y - position.y);
-        mat_set(model_matrix, 3, 2, d->pos.z - position.z);
+        mat_set(model_matrix, 3, 0, d->pos.x - offset.x);
+        mat_set(model_matrix, 3, 1, d->pos.y - offset.y);
+        mat_set(model_matrix, 3, 2, d->pos.z - offset.z);
         glUniformMatrix4fv(model_matrix_location, 1, GL_FALSE, model_matrix);
         // Draw
         if (!same_vao || i == 0)

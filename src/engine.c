@@ -18,6 +18,7 @@
 #include "input.h"
 
 #include "game.h"
+#include "number_display.h"
 
 GLFWwindow *window;
 
@@ -27,13 +28,20 @@ GLint dots_per_unit;
 
 // Dealing with games
 struct game game;
+struct number_display time_display;
+struct number_display bomb_display;
+struct draw win_icon;
+
+GLuint tex_win;
+GLuint tex_lose;
+GLuint tex_blankwin;
 
 static void fit_window()
 {
     camera_pos.x = game.center.x;
-    camera_pos.y = game.center.y;
+    camera_pos.y = game.center.y + 0.5;
     draw_set_position(camera_pos);
-    glfwSetWindowSize(window, game.w * dots_per_unit, game.h * dots_per_unit);
+    glfwSetWindowSize(window, game.w * dots_per_unit, (game.h + 1) * dots_per_unit);
 }
 
 static void new_game(GLint w, GLint h, GLint bombs)
@@ -41,6 +49,32 @@ static void new_game(GLint w, GLint h, GLint bombs)
     game_reset(&game);
     game_start(&game, w, h, bombs);
     fit_window();
+}
+
+static void init_hud()
+{
+    time_display = (struct number_display){
+        .digits = 4,
+        .origin_right = true,
+    };
+    bomb_display = (struct number_display){
+        .digits = 3,
+    };
+    win_icon = (struct draw){
+        .vao = vaos[VAO_WIDE],
+        .tex = tex_win,
+    };
+}
+
+static void resize_hud()
+{
+    GLfloat right = (window_wh.x / dots_per_unit) / 2 - 0.25f;
+    GLfloat left = (window_wh.x / dots_per_unit) / -2 + 0.25f;
+    GLfloat top = (window_wh.y / dots_per_unit) / 2 - 0.5f;
+    time_display.pos = (struct vec3){ right - 0.25, top, -1 };
+    bomb_display.pos = (struct vec3){ left + 0.25, top, -1 };
+    bomb_display.pos = (struct vec3){ left + 0.25, top, -1 };
+    win_icon.pos = (struct vec3){ 0, top, -1 };
 }
 
 // GLFW callbacks
@@ -66,12 +100,13 @@ static void window_size_callback(GLFWwindow *window, int x, int y)
     draw_set_dimensions(x, y, dots_per_unit);
     window_wh = (struct vec2){ x, y };
     glViewport(0, 0, x, y);
+    resize_hud();
 }
 
 static void engine_init()
 {
     // Default engine values
-    dots_per_unit = 26;
+    dots_per_unit = 32;
 
     // Set up random
     srand(time(NULL));
@@ -93,6 +128,15 @@ static void engine_init()
     draw_set_dimensions((GLfloat)winx, (GLfloat)winy, dots_per_unit);
     window_wh = (struct vec2){ winx, winy };
     glfwSetWindowSizeCallback(window, window_size_callback);
+
+    // Textures
+    tex_win = texture_load("res/tga/win.tga");
+    tex_lose = texture_load("res/tga/lose.tga");
+    tex_blankwin = texture_load("res/tga/blankwin.tga");
+
+    // Set up static game stuff
+    game_init();
+    number_display_init();
 }
 
 static void engine_deinit()
@@ -109,12 +153,12 @@ static void engine_step(struct game *game)
     glfwPollEvents();
 
     // Panning with middle click
-    struct vec2 drag = input.drag;
-    drag.x /= dots_per_unit;
-    drag.y /= -dots_per_unit;
-    camera_pos.x -= drag.x;
-    camera_pos.y -= drag.y;
-    draw_set_position(camera_pos);
+    //struct vec2 drag = input.drag;
+    //drag.x /= dots_per_unit;
+    //drag.y /= -dots_per_unit;
+    //camera_pos.x -= drag.x;
+    //camera_pos.y -= drag.y;
+    //draw_set_position(camera_pos);
 
     // New game with 'e'asy, 'm'edium, or e'x'pert
     if (input.e.press) {
@@ -133,18 +177,20 @@ static void engine_step(struct game *game)
     }
 
     // Zoom with mouse wheel
-    if (input.scroll.y > 0) {
-        dots_per_unit -= 2;
-        if (dots_per_unit < 12)
-            dots_per_unit += 2;
-        draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
-    }
-    else if (input.scroll.y < 0) {
-        dots_per_unit += 2;
-        if (dots_per_unit > 64)
-            dots_per_unit -= 2;
-        draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
-    }
+    //if (input.scroll.y > 0) {
+    //    dots_per_unit -= 2;
+    //    if (dots_per_unit < 12)
+    //        dots_per_unit += 2;
+    //    draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
+    //    resize_hud();
+    //}
+    //else if (input.scroll.y < 0) {
+    //    dots_per_unit += 2;
+    //    if (dots_per_unit > 64)
+    //        dots_per_unit -= 2;
+    //    draw_set_dimensions(window_wh.x, window_wh.y, dots_per_unit);
+    //    resize_hud();
+    //}
 
     if (!game->over) {
         // Game interactions
@@ -152,7 +198,7 @@ static void engine_step(struct game *game)
         GLint tile_x = roundf(mouse_pos.x);
         GLint tile_y = roundf(mouse_pos.y);
         // Visual press if click is held
-        if (input.mousel.state || input.mouser.state)
+        if (input.mousel.state)
             game_press(game, tile_x, tile_y);
         else
             game_unpress(game);
@@ -162,9 +208,17 @@ static void engine_step(struct game *game)
         // Right click to flag tile
         if (input.mouser.release)
             game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
-        kprint("time: %f", glfwGetTime() - game->start_time);
+        // Show numbers at top of screen
+        time_display.value = (GLint)(glfwGetTime() - game->start_time);
+        number_display_refresh(&time_display);
+        bomb_display.value = game->bombs - game->flag_count;
+        number_display_refresh(&bomb_display);
+        // Set win texture
+        win_icon.tex = tex_blankwin;
     }
-
+    else {
+        win_icon.tex = game->win ? tex_win : tex_lose;
+    }
     // Clear and draw
     glClear(GL_COLOR_BUFFER_BIT
             | GL_DEPTH_BUFFER_BIT
@@ -172,7 +226,10 @@ static void engine_step(struct game *game)
             | GL_STENCIL_BUFFER_BIT);
     //draw_list(background_objs.draws, background_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
     //draw_list(foreground_objs.draws, foreground_objs.count, PROJECTION_ORTHOGRAPHIC, true, true);
-    draw_list(game->draw_group.draws, game->draw_group.count, PROJECTION_ORTHOGRAPHIC, false, false);
+    draw_list(game->draw_group.draws, game->draw_group.count, PROJECTION_ORTHOGRAPHIC, false, false, true);
+    draw_list(time_display.group.draws, time_display.group.count, PROJECTION_ORTHOGRAPHIC, false, false, false);
+    draw_list(bomb_display.group.draws, time_display.group.count, PROJECTION_ORTHOGRAPHIC, false, false, false);
+    draw_list(&win_icon, 1, PROJECTION_ORTHOGRAPHIC, false, false, false);
     // Push to display
     glfwSwapBuffers(window);
 }
@@ -202,6 +259,7 @@ extern int engine_go()
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     // Make the window
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     window = glfwCreateWindow(320, 240, "ksweeper", NULL, NULL);
     if (window == NULL) {
         glfwTerminate();
@@ -210,8 +268,9 @@ extern int engine_go()
 
     // Init, loop, deinit
     engine_init();
-
-    game_init();
+    new_game(8, 8, 10);
+    init_hud();
+    resize_hud();
     while (!glfwWindowShouldClose(window)) {
         engine_step(&game);
     }

@@ -22,6 +22,6 @@ extern void draw_set_dimensions(GLuint w, GLuint h, GLint dots_per_unit);
 extern void draw_set_position(struct vec3 pos);
 
 extern void draw_list(struct draw *draws, GLuint ndraws, GLuint projection,
-        bool same_vao, bool same_tex);
+        bool same_vao, bool same_tex, bool relative);
 
 #endif

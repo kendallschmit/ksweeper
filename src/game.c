@@ -30,6 +30,9 @@ void tile_update_all(struct game *game);
 void reveal(struct game *game, struct tile *t);
 void reveal_at(struct game *game, GLint x, GLint y);
 void super_reveal(struct game *game, struct tile *t);
+void tile_flag(struct game *game, struct tile *t);
+
+void victory_check(struct game *game);
 
 struct tile *tile_at(struct game *game, GLint x, GLint y)
 {
@@ -91,6 +94,7 @@ void reveal(struct game *game, struct tile *t)
     if (t->state != TILE_STATE_HIDDEN)
         return;
     t->state = TILE_STATE_REVEAL;
+    game->reveal_count++;
     if (t->bomb) {
         game->over = true;
         tile_update_all(game);
@@ -106,6 +110,7 @@ void reveal(struct game *game, struct tile *t)
         reveal_at(game, t->x + 1, t->y + 1);
     }
     tile_update(game, t);
+    victory_check(game);
 }
 
 void reveal_at(struct game *game, GLint x, GLint y)
@@ -143,9 +148,37 @@ void super_reveal(struct game *game, struct tile *t)
             struct tile *n = neighbors[i];
             if (n == NULL)
                 continue;
-            if (n->state == TILE_STATE_HIDDEN)
-                reveal(game, n);
+            reveal(game, n);
         }
+    }
+}
+
+void tile_flag(struct game *game, struct tile *t)
+{
+    if (t->state == TILE_STATE_HIDDEN) {
+        t->state = TILE_STATE_FLAG;
+        game->flag_count++;
+    }
+    else if (t->state == TILE_STATE_FLAG) {
+        t->state = TILE_STATE_MARK;
+        game->flag_count--;
+    }
+    else if (t->state == TILE_STATE_MARK) {
+        t->state = TILE_STATE_HIDDEN;
+    }
+    else {
+        return;
+    }
+    tile_update(game, t);
+    victory_check(game);
+}
+
+void victory_check(struct game *game)
+{
+    if (game->flag_count + game->reveal_count == game->w * game->h) {
+        kprint("GAME WIN");
+        game->win = true;
+        game->over = true;
     }
 }
 
@@ -188,6 +221,7 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
     *game = (struct game){
             .w = w,
             .h = h,
+            .bombs = bombs,
             .center = (struct vec2){ (w - 1) / 2.0, (h - 1) / 2.0 },
     };
     // Allocate tiles and draws
@@ -337,17 +371,6 @@ void game_reveal(struct game *game, GLint x, GLint y)
 void game_flag(struct game *game, GLint x, GLint y)
 {
     struct tile *t = tile_at(game, x, y);
-    if (t->state == TILE_STATE_HIDDEN) {
-        t->state = TILE_STATE_FLAG;
-    }
-    else if (t->state == TILE_STATE_FLAG) {
-        t->state = TILE_STATE_MARK;
-    }
-    else if (t->state == TILE_STATE_MARK) {
-        t->state = TILE_STATE_HIDDEN;
-    }
-    else {
-        return;
-    }
-    tile_update(game, t);
+    if (t != NULL)
+        tile_flag(game, t);
 }
