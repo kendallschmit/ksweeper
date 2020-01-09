@@ -11,6 +11,9 @@ WARNING_OPTIONS = -Wpedantic -Werror -Wfatal-errors
 srcdir = src
 builddir = build
 
+# WINDOWS FLAGS
+LDFLAGS += -mwindows
+
 # Default to build all
 all:
 

@@ -8,4 +8,5 @@
 int main(int argc, const char *argv[])
 {
 	engine_go();
+	return 0;
 }
