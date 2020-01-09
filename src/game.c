@@ -203,8 +203,7 @@ void tile_flag(struct game *game, struct tile *t)
 
 void victory_check(struct game *game)
 {
-    if (game->flag_count + game->reveal_count == game->w * game->h) {
-        kprint("GAME WIN");
+    if (!game->over && game->reveal_count == game->w * game->h - game->bombs) {
         game->win = true;
         game->over = true;
     }
