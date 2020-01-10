@@ -3,12 +3,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-    #define OPEN_FLAGS_READ_BINARY "rb"
-#else
-    #define OPEN_FLAGS_READ_BINARY "r"
-#endif
-
 char *file_name(char *path) {
     char *p = path;
     char *name = p;
@@ -20,14 +14,13 @@ char *file_name(char *path) {
     return name;
 }
 
-char *do_file(FILE *outf, char *symbol_prefix, char *path)
+char *do_file(FILE *namesf, FILE *blobsf, char *symbol_prefix, char *path)
 {
-    FILE *f = fopen(path, OPEN_FLAGS_READ_BINARY);
+    FILE *f = fopen(path, "rb");
     if (f == NULL) {
         printf("fopen() failed for \"%s\"", path);
         return NULL;
     }
-
     char *p = path;
     char *name = p;
     while (*p != '\0') {
@@ -37,56 +30,60 @@ char *do_file(FILE *outf, char *symbol_prefix, char *path)
             *p = '\0';
         p++;
     }
-
     size_t len = 0;
     uint8_t b;
-    fprintf(outf, "\nuint8_t %s_%s[] = {", symbol_prefix, name);
+    fprintf(blobsf, "\nuint8_t %s_%s[] = {", symbol_prefix, name);
     while (fread(&b, sizeof(b), 1, f)) {
-        fprintf(outf, "0x%x,", b);
+        fprintf(blobsf, "0x%x,", b);
         len++;
     }
-    fprintf(outf, "};");
+    fprintf(blobsf, "};");
     fclose(f);
+
+    fprintf(namesf, "extern uint8_t %s_%s[%zu];\n", symbol_prefix, name, len);
     return name;
 }
 
 int main(int argc, char *argv[])
 {
     if (argc < 4) {
-        printf("USAGE: resgen OUT_H OUT_C SYMBOL_PREFIX FILES ...");
+        printf("Usage: resgen NAMES_PATH BLOBS_PATH FILES ...");
         exit(1);
     }
-    char *out_h = argv[1];
-    char *out_c = argv[2];
+    char *names_path = argv[1];
+    char *blobs_path = argv[2];
     char *symbol_prefix = argv[3];
 
-    char *names[argc - 4];
+    char **filesv = &argv[4];
+    int filesc = argc -= 4;
+    char *namesv[filesc];
+    int namesc = filesc;
 
-    FILE *out_c_file = fopen(out_c, "w");
-    if (out_c_file == NULL) {
-        printf("fopen() failed for \"%s\"", out_c);
+    FILE *namesf = fopen(names_path, "wb");
+    FILE *blobsf = fopen(blobs_path, "wb");
+    if (namesf == NULL || blobsf == NULL) {
+        printf("Error in fopen()");
         exit(1);
     }
-    for (int i = 4; i < argc; i++) {
-        char *path = argv[i];
-        names[i - 4] = do_file(out_c_file, symbol_prefix, path);
-    }
-    fclose(out_c_file);
 
-    FILE *out_h_file = fopen(out_h, "w");
-    if (out_h_file == NULL) {
-        printf("fopen() failed for \"%s\"", out_h);
-        exit(1);
+    // Top of names
+    fprintf(namesf, "#ifndef %s_H\n", symbol_prefix);
+    fprintf(namesf, "#define %s_H\n\n", symbol_prefix);
+    fprintf(namesf, "#include <stdint.h>\n");
+    fprintf(blobsf, "#include \"%s\"\n", file_name(names_path));
+    // Main contents
+    for (int i = 0; i < filesc; i++) {
+        namesv[i] = do_file(namesf, blobsf, symbol_prefix, filesv[i]);
     }
-    fprintf(out_h_file, "#ifndef %s_H\n", symbol_prefix);
-    fprintf(out_h_file, "#define %s_H\n", symbol_prefix);
-    fprintf(out_h_file, "#define FOR_EACH_%s(m)", symbol_prefix);
-    for (int i = 0; i < argc - 4; i++) {
-        if (names[i] != NULL)
-            fprintf(out_h_file, "\\\nm(%s)", names[i]);
+    // End of names
+    fprintf(namesf, "\n#define %s_for_each(m)", symbol_prefix);
+    for (int i = 0; i < filesc; i++) {
+        if (namesv[i] != NULL)
+            fprintf(namesf, " \\\nm(%s)", namesv[i]);
     }
-    fprintf(out_h_file, "\n#endif\n");
-    fclose(out_h_file);
+    fprintf(namesf, "\n\n#endif\n");
+    fclose(namesf);
+    fclose(blobsf);
 
     return 0;
 }

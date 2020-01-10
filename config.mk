@@ -1,2 +1,2 @@
 platform = windows
-#build_type = release
+build_type = release

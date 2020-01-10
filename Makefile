@@ -28,22 +28,26 @@ LDFLAGS += -s
 endif
 
 tga = $(wildcard res/tga/*.tga)
-tga_h = $(builddir)/tga_names.h $(builddir)/tga.h
-resource_src = $(tga_h)
+tga_h = $(builddir)/resgen_tga.h
+tga_c = $(builddir)/resgen_tga.c
+resource_src += $(tga_c)
+resource_h += $(tga_h)
+
+resource_gen = $(resource_src) $(resource_h)
 
 src = $(wildcard $(srcdir)/*.c)
-obj = $(src:src/%.c=$(builddir)/%.o)
+obj = $(src:src/%.c=$(builddir)/%.o) $(resource_src:%.c=%.o)
 dep = $(obj:.o=.d)
 
 # Default build binary
 all: $(bin)
 
 # Build .o from .c with strict warnings and errors
-$(builddir)/%.o: $(srcdir)/%.c | $(resource_src)
+$(builddir)/%.o: $(srcdir)/%.c | $(resource_gen)
 	$(CC) -c $< $(CPPFLAGS) $(CFLAGS) $(WARNING_OPTIONS) $(OUTPUT_OPTION)
 
 # Build .o from .c in build dir  with strict warnings and errors
-$(builddir)/%.o: $(build_dir)/%.c | $(resource_src)
+$(builddir)/%.o: $(build_dir)/%.c | $(resource_gen)
 	$(CC) -c $< $(CPPFLAGS) $(CFLAGS) $(WARNING_OPTIONS) $(OUTPUT_OPTION)
 
 # Don't be so strict when building glad
@@ -51,8 +55,8 @@ $(builddir)/glad.o: $(srcdir)/glad.c
 	$(CC) -c $< $(CPPFLAGS) $(CFLAGS) -Wno-stringop-overflow $(OUTPUT_OPTION)
 
 # Build tga.h and tga.c from .tga
-$(tga_h): $(tga)
-	$(resgen) $(tga_h) tga $^
+$(tga_h) $(tga_c): $(tga)
+	$(resgen) $(tga_h) $(tga_c) resgen_tga $^
 
 # Link the binary
 $(bin): $(obj)
@@ -61,7 +65,7 @@ $(bin): $(obj)
 # Remove generated files
 .PHONY: clean
 clean:
-	rm -f $(resource_src) $(bin) $(obj) $(dep)
+	rm -f $(resource_gen) $(bin) $(obj) $(dep)
 
 # Shortcut to build and run because I hate hate HATE the Windows commmand
 # prompt it is so gosh-darn hard to run an executable and the stupid
