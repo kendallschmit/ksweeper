@@ -2,39 +2,27 @@
 
 #include "kge_util.h"
 
-// Should make this dynamic or something
-#define SHADER_SOURCE_LEN 4096
+#include "resgen_shader.h"
 
 GLuint shader_program_simple = 0;
 
-static GLuint load_shader(char *path, GLenum shader_type) {
-    FILE *f = fopen(path, OPEN_FLAGS_READ_BINARY);
-    if (f == NULL) {
-        kprint("Unable to open shader file \"%s\"", path);
-        return 0;
-    }
-    // Simulate the array of lines that glShaderSource expects
-    GLchar source[SHADER_SOURCE_LEN] = { 0 };
+static GLuint load_shader(char *source, GLenum shader_type) {
     GLchar *lines = source;
     const GLchar **lines_ptr = (const GLchar **)&lines;
-    if (fread(source, sizeof(source[0]), SHADER_SOURCE_LEN, f) == 0) {
-        kprint("Problem reading shader file \"%s\"", path);
-        return 0;
-    }
     GLint success;
     GLuint shad = glCreateShader(shader_type);
     glShaderSource(shad, 1, lines_ptr, NULL);
     glCompileShader(shad);
     glGetShaderiv(shad, GL_COMPILE_STATUS, &success);
     if (success) {
-        kprint("Compiled \"%s\"", path);
+        kprint("Compiled shader");
     }
     else {
         GLint log_size = 0;
         glGetShaderiv(shad, GL_INFO_LOG_LENGTH, &log_size);
         GLchar log[log_size];
         glGetShaderInfoLog(shad, log_size, NULL, log);
-        kprint("Failed to compile \"%s\": %s", path, log);
+        kprint("Failed to compile shader: %s", log);
     }
     return shad;
 }
@@ -43,8 +31,15 @@ static GLuint fshad = 0;
 static GLuint vshad = 0;
 
 extern void shader_init() {
-    vshad = load_shader("res/shader/simple_vertex.glsl", GL_VERTEX_SHADER);
-    fshad = load_shader("res/shader/simple_fragment.glsl", GL_FRAGMENT_SHADER);
+    char sourcebuf[4096];
+    // Simple vertex
+    strncpy(sourcebuf, (char *)resgen_shader_simple_vertex, sizeof(resgen_shader_simple_vertex));
+    sourcebuf[sizeof(resgen_shader_simple_vertex)] = '\0';
+    vshad = load_shader(sourcebuf, GL_VERTEX_SHADER);
+    // Simple fragment
+    strncpy(sourcebuf, (char *)resgen_shader_simple_fragment, sizeof(resgen_shader_simple_fragment));
+    sourcebuf[sizeof(resgen_shader_simple_fragment)] = '\0';
+    fshad = load_shader(sourcebuf, GL_FRAGMENT_SHADER);
 
     // Make a basic program, attach shaders
     shader_program_simple = glCreateProgram();

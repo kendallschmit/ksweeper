@@ -28,10 +28,16 @@ LDFLAGS += -s
 endif
 
 tga = $(wildcard res/tga/*.tga)
-tga_h = $(builddir)/resgen_tga.h
 tga_c = $(builddir)/resgen_tga.c
+tga_h = $(builddir)/resgen_tga.h
 resource_src += $(tga_c)
 resource_h += $(tga_h)
+
+glsl = $(wildcard res/shader/*.glsl)
+glsl_c = $(builddir)/resgen_shader.c
+glsl_h = $(builddir)/resgen_shader.h
+resource_src += $(glsl_c)
+resource_h += $(glsl_h)
 
 resource_gen = $(resource_src) $(resource_h)
 
@@ -54,9 +60,13 @@ $(builddir)/%.o: $(build_dir)/%.c | $(resource_gen)
 $(builddir)/glad.o: $(srcdir)/glad.c
 	$(CC) -c $< $(CPPFLAGS) $(CFLAGS) -Wno-stringop-overflow $(OUTPUT_OPTION)
 
-# Build tga.h and tga.c from .tga
+# Build tga resources
 $(tga_h) $(tga_c): $(tga)
 	$(resgen) $(tga_h) $(tga_c) resgen_tga $^
+
+# Build glsl resources
+$(glsl_h) $(glsl_c): $(glsl)
+	$(resgen) $(glsl_h) $(glsl_c) resgen_shader $^
 
 # Link the binary
 $(bin): $(obj)
