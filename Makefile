@@ -48,6 +48,14 @@ dep = $(obj:.o=.d)
 # Default build binary
 all: $(bin)
 
+# Windows icon
+ifeq "$(platform)" "windows"
+ksweeper_res = $(builddir)/ksweeper.res.o
+obj += $(ksweeper_res)
+$(ksweeper_res): ksweeper.rc ksweeper.ico
+	windres ksweeper.rc -O coff -o $(ksweeper_res)
+endif
+
 # Build .o from .c with strict warnings and errors
 $(builddir)/%.o: $(srcdir)/%.c | $(resource_gen)
 	$(CC) -c $< $(CPPFLAGS) $(CFLAGS) $(WARNING_OPTIONS) $(OUTPUT_OPTION)
