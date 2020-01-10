@@ -12,22 +12,19 @@
 #include "draw.h"
 
 GLuint tex_n[10];
-GLuint tex_blank;
 
 void number_display_init()
 {
-    tex_n[0] = texture_load("res/tga/n0.tga");
-    tex_n[1] = texture_load("res/tga/n1.tga");
-    tex_n[2] = texture_load("res/tga/n2.tga");
-    tex_n[3] = texture_load("res/tga/n3.tga");
-    tex_n[4] = texture_load("res/tga/n4.tga");
-    tex_n[5] = texture_load("res/tga/n5.tga");
-    tex_n[6] = texture_load("res/tga/n6.tga");
-    tex_n[7] = texture_load("res/tga/n7.tga");
-    tex_n[8] = texture_load("res/tga/n8.tga");
-    tex_n[9] = texture_load("res/tga/n9.tga");
-
-    tex_blank = texture_load("res/tga/nblank.tga");
+    tex_n[0] = texture_n0;
+    tex_n[1] = texture_n1;
+    tex_n[2] = texture_n2;
+    tex_n[3] = texture_n3;
+    tex_n[4] = texture_n4;
+    tex_n[5] = texture_n5;
+    tex_n[6] = texture_n6;
+    tex_n[7] = texture_n7;
+    tex_n[8] = texture_n8;
+    tex_n[9] = texture_n9;
 }
 
 void number_display_refresh(struct number_display *nd)
@@ -40,7 +37,7 @@ void number_display_refresh(struct number_display *nd)
             offset -= (nd->digits - 1) / 2.0f;
         nd->group.draws[i] = (struct draw){
             .vao = vaos[VAO_TALL],
-            .tex = tex_blank,
+            .tex = texture_nblank,
             .pos = (struct vec3){ nd->pos.x + offset, nd->pos.y, nd->pos.z },
         };
     }
@@ -48,7 +45,7 @@ void number_display_refresh(struct number_display *nd)
     GLint value = nd->value;
     for (GLint i = nd->digits - 1; i >= 0; i--) {
         if (value == 0 && i != nd->digits - 1)
-            nd->group.draws[i].tex = tex_blank;
+            nd->group.draws[i].tex = texture_nblank;
         else
             nd->group.draws[i].tex = tex_n[value % 10];
         value /= 10;

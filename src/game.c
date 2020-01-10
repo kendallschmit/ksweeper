@@ -15,16 +15,6 @@
 #include "draw.h"
 
 GLuint tex_digits[9];
-GLuint tex_hidden;
-GLuint tex_pressed;
-GLuint tex_flag;
-GLuint tex_wrong_flag;
-GLuint tex_mark;
-GLuint tex_bomb;
-GLuint tex_bomb_explode;
-
-GLuint tex_akko;
-GLuint tex_ritsu;
 
 void tile_update(struct game *game, struct tile *t);
 void tile_update_all(struct game *game);
@@ -55,18 +45,18 @@ void tile_update(struct game *game, struct tile *t)
     switch (t->state) {
     case TILE_STATE_HIDDEN:
         if (game->over && t->bomb) {
-            t->draw->tex = tex_bomb;
+            t->draw->tex = texture_bomb;
         }
         else if (t->pressed) {
-            t->draw->tex = tex_pressed;
+            t->draw->tex = texture_pressed;
         }
         else {
-            t->draw->tex = tex_hidden;
+            t->draw->tex = texture_hidden;
         }
         break;
     case TILE_STATE_REVEAL:
         if (t->bomb) {
-            t->draw->tex = tex_bomb_explode;
+            t->draw->tex = texture_bomb_explode;
         }
         else {
             t->draw->tex = tex_digits[t->n];
@@ -74,18 +64,18 @@ void tile_update(struct game *game, struct tile *t)
         break;
     case TILE_STATE_FLAG:
         if (game->over && !t->bomb) {
-            t->draw->tex = tex_wrong_flag;
+            t->draw->tex = texture_wrong_flag;
         }
         else {
-            t->draw->tex = tex_flag;
+            t->draw->tex = texture_flag;
         }
         break;
     case TILE_STATE_MARK:
         if (game->over && t->bomb) {
-            t->draw->tex = tex_bomb;
+            t->draw->tex = texture_bomb;
         }
         else {
-            t->draw->tex = tex_mark;
+            t->draw->tex = texture_mark;
         }
         break;
     default:
@@ -125,6 +115,7 @@ void reveal(struct game *game, struct tile *t)
     if (t->bomb) {
         game->over = true;
         tile_update_all(game);
+        return;
     }
     game->reveal_count++;
     if (t->n == 0) {
@@ -247,26 +238,15 @@ void overclick(struct game *game, GLint x, GLint y)
 
 void game_init()
 {
-    tex_digits[0] = texture_load("res/tga/zero.tga");
-    tex_digits[1] = texture_load("res/tga/one.tga");
-    tex_digits[2] = texture_load("res/tga/two.tga");
-    tex_digits[3] = texture_load("res/tga/three.tga");
-    tex_digits[4] = texture_load("res/tga/four.tga");
-    tex_digits[5] = texture_load("res/tga/five.tga");
-    tex_digits[6] = texture_load("res/tga/six.tga");
-    tex_digits[7] = texture_load("res/tga/seven.tga");
-    tex_digits[8] = texture_load("res/tga/eight.tga");
-
-    tex_hidden = texture_load("res/tga/hidden.tga");
-    tex_pressed = texture_load("res/tga/pressed.tga");
-    tex_flag = texture_load("res/tga/flag.tga");
-    tex_wrong_flag = texture_load("res/tga/wrong_flag.tga");
-    tex_mark = texture_load("res/tga/mark.tga");
-    tex_bomb = texture_load("res/tga/bomb.tga");
-    tex_bomb_explode = texture_load("res/tga/bomb_explode.tga");
-
-    tex_akko = texture_load("res/tga/akko.tga");
-    tex_ritsu = texture_load("res/tga/ritsu128.tga");
+    tex_digits[0] = texture_zero;
+    tex_digits[1] = texture_one;
+    tex_digits[2] = texture_two;
+    tex_digits[3] = texture_three;
+    tex_digits[4] = texture_four;
+    tex_digits[5] = texture_five;
+    tex_digits[6] = texture_six;
+    tex_digits[7] = texture_seven;
+    tex_digits[8] = texture_eight;
 }
 
 void game_start(struct game *game, GLint w, GLint h, GLint bombs)
@@ -304,7 +284,7 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
             };
             *d = (struct draw){
                 .vao = vaos[VAO_QUAD],
-                .tex = tex_hidden,
+                .tex = texture_hidden,
                 .pos = (struct vec3){ x, y, 0 },
             };
         }

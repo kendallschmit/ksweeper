@@ -32,10 +32,6 @@ struct number_display time_display;
 struct number_display bomb_display;
 struct draw win_icon;
 
-GLuint tex_win;
-GLuint tex_lose;
-GLuint tex_blankwin;
-
 static void fit_window()
 {
     camera_pos.x = game.center.x;
@@ -62,7 +58,7 @@ static void init_hud()
     };
     win_icon = (struct draw){
         .vao = vaos[VAO_WIDE],
-        .tex = tex_win,
+        .tex = texture_win,
     };
 }
 
@@ -119,6 +115,7 @@ static void engine_init()
     // Init engine components
     shader_init();
     vaos_init();
+    texture_init();
     draw_init(5, 1.5, 0.1, 1000, dots_per_unit, 1000);
     input_init(window);
 
@@ -128,11 +125,6 @@ static void engine_init()
     draw_set_dimensions((GLfloat)winx, (GLfloat)winy, dots_per_unit);
     window_wh = (struct vec2){ winx, winy };
     glfwSetWindowSizeCallback(window, window_size_callback);
-
-    // Textures
-    tex_win = texture_load("res/tga/win.tga");
-    tex_lose = texture_load("res/tga/lose.tga");
-    tex_blankwin = texture_load("res/tga/blankwin.tga");
 
     // Set up static game stuff
     game_init();
@@ -214,10 +206,10 @@ static void engine_step(struct game *game)
         bomb_display.value = game->bombs - game->flag_count;
         number_display_refresh(&bomb_display);
         // Set win texture
-        win_icon.tex = tex_blankwin;
+        win_icon.tex = texture_blankwin;
     }
     else {
-        win_icon.tex = game->win ? tex_win : tex_lose;
+        win_icon.tex = game->win ? texture_win : texture_lose;
         if (input.mousel.release
                 && input.cursor_pos.y < dots_per_unit
                 && input.cursor_pos.x > window_wh.x / 2 - dots_per_unit * 1
