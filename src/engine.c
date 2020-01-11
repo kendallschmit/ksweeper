@@ -201,7 +201,12 @@ static void engine_step(struct game *game)
         if (input.mouser.release)
             game_flag(game, roundf(mouse_pos.x), roundf(mouse_pos.y));
         // Show numbers at top of screen
-        time_display.value = (GLint)(glfwGetTime() - game->start_time);
+        if (game->reveal_count > 0) {
+            time_display.value = (GLint)(glfwGetTime() - game->start_time);
+        }
+        else {
+            time_display.value = 0;
+        }
         number_display_refresh(&time_display);
         bomb_display.value = game->bombs - game->flag_count;
         number_display_refresh(&bomb_display);

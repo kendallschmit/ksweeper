@@ -97,20 +97,37 @@ void reveal(struct game *game, struct tile *t)
         return;
     t->state = TILE_STATE_REVEAL;
 
-    if (game->reveal_count == 0 && t->bomb) {
+    if (game->reveal_count == 0) {
+        // Add bombs
+        kprint("Add bombs")
+        GLint bomblist[game->w * game->h];
+        GLint bomblist_count = 0;
         for (GLint x = 0; x < game->w; x++) {
-            for (GLint y = game->h - 1; y >= 0; y--) {
-                struct tile *other = tile_at(game, x, y);
-                if (other->bomb)
-                    continue;
-                other->bomb = true;
-                kprint("moved bomb from %d %d to %d %d", t->x, t->y, other->x, other->y);
-                goto moved_bomb;
+            for (GLint y = 0; y < game->h; y++) {
+                if (x >= t->x - 1 && x <= t->x + 1) {
+                    if (y >= t->y - 1 && y <= t->y + 1) {
+                        continue;
+                    }
+                }
+                bomblist[bomblist_count] = x + y * game->w;
+                bomblist_count++;
             }
         }
-        moved_bomb:
-        t->bomb = false;
+        while (bomblist_count > game->bombs) {
+            GLint i = randi(0, bomblist_count);
+            while (i < bomblist_count - 1) {
+                bomblist[i] = bomblist[i + 1];
+                i++;
+            }
+            bomblist_count--;
+        }
+        for (GLint i = 0; i < bomblist_count; i++) {
+            game->tiles[bomblist[i]].bomb = true;
+        }
+        // Count bombs
         count_bombs(game);
+        // Set start time
+        game->start_time = glfwGetTime();
     }
     if (t->bomb) {
         game->over = true;
@@ -289,28 +306,6 @@ void game_start(struct game *game, GLint w, GLint h, GLint bombs)
             };
         }
     }
-    // Add bombs
-    kprint("Add bombs")
-    GLint bomblist[w * h];
-    GLint bomblist_count = w * h;
-    for (GLint i = 0; i < bomblist_count; i++) {
-        bomblist[i] = i;
-    }
-    while (bomblist_count > bombs) {
-        GLint i = randi(0, bomblist_count);
-        while (i < bomblist_count - 1) {
-            bomblist[i] = bomblist[i + 1];
-            i++;
-        }
-        bomblist_count--;
-    }
-    for (GLint i = 0; i < bomblist_count; i++) {
-        game->tiles[bomblist[i]].bomb = true;
-    }
-    // Count bombs
-    count_bombs(game);
-    // Set start time
-    game->start_time = glfwGetTime();
     kprint("Done with %s()", __func__);
 }
 
