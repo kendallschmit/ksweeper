@@ -15,8 +15,8 @@ The project needs a lot of cleanup.
 - No ads
 - Loads quickly
 
-## About `resgen`
-`resgen` is a small program that generates .h files to include binary data. You need to build `resgen` before you can build ksweeper. The process should look something like:
+## Using resgen
+resgen is a small program that generates .h files from binary data. You need to build resgen before you can build ksweeper. The process should look something like:
 ```
 cd resgen
 make
