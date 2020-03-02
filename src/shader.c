@@ -1,5 +1,7 @@
 #include "shader.h"
 
+#include <string.h>
+
 #include "kge_util.h"
 
 #include "resgen_shader.h"
