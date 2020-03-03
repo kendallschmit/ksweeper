@@ -1,9 +1,9 @@
 # Compiler stuff
-CC = gcc
+CC = gcc-mp-9
 CFLAGS += -O2 -std=c11
 CFLAGS += -Iinclude -Ibuild
-LDFLAGS += -Llib_win
-LDLIBS += -lm -lglfw3 -lgdi32 -lopengl32
+LDFLAGS +=
+LDLIBS += -lm -lglfw3
 
 OUTPUT_OPTION += -MMD
 WARNING_OPTIONS = -Wpedantic -Werror -Wfatal-errors
@@ -19,8 +19,13 @@ bin := ksweeper
 -include config.mk
 
 ifeq "$(platform)" "windows"
-LDFLAGS += -mwindows
+LDFLAGS += -mwindows -Llib_win
+LDLIBS += -lgdi32 -lopengl32
 bin := $(bin).exe
+endif
+
+ifeq "$(platform)" "macos"
+LDFLAGS += -Llib_macos -framework OpenGL -framework Cocoa -framework IOKit
 endif
 
 ifeq "$(build_type)" "release"
@@ -90,6 +95,6 @@ clean:
 # backslashes AAAAGGGGHHHH
 .PHONY: run
 run: $(bin)
-	ksweeper
+	./ksweeper
 
 -include $(dep)
