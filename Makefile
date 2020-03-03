@@ -1,5 +1,5 @@
 # Compiler stuff
-CC = gcc-mp-9
+CC ?= gcc
 CFLAGS += -O2 -std=c11
 CFLAGS += -Iinclude -Ibuild
 LDFLAGS +=
