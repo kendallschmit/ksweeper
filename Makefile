@@ -19,7 +19,7 @@ bin := ksweeper
 -include config.mk
 
 ifeq "$(platform)" "windows"
-LDFLAGS += -mwindows -Llib_win
+LDFLAGS += -mwindows -Llib_windows
 LDLIBS += -lgdi32 -lopengl32
 bin := $(bin).exe
 endif
